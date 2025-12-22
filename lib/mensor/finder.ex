@@ -14,19 +14,16 @@ defmodule Mensor.Finder do
 
   @impl GenServer
   def handle_continue(:init, nil) do
-    IO.inspect(@start_path)
-
     projFiles =
       Mensor.Finder.FilepathEnumeration.proj_files(@start_path)
-      |> IO.inspect()
 
     slnPaths =
       Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
-      |> IO.inspect()
 
-    diff =
-      MapSet.symmetric_difference(MapSet.new(projFiles), MapSet.new(slnPaths))
-      |> IO.inspect()
+    (projFiles ++ slnPaths)
+    |> Enum.sort()
+    |> Enum.dedup()
+    |> Enum.each(fn x -> Mensor.DiscoverDependencies.start(x) end)
 
     {:noreply, nil}
   end
@@ -50,6 +47,7 @@ defmodule Mensor.Finder.FilepathEnumeration do
     |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
   end
 
+  # TODO: Replace Enum with Stream
   def solution_proj_files(path) do
     File.stream!(path)
     |> Enum.map(&String.trim/1)

@@ -7,6 +7,7 @@ defmodule Mensor.Writer do
     GenServer.start(__MODULE__, nil, name: __MODULE__)
   end
 
+  # TODO: Hold onto the open file and use it for all writes, close it when exiting.
   @impl GenServer
   def init(_) do
     File.mkdir_p!(@output_folder)
