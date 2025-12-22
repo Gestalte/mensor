@@ -14,13 +14,18 @@ defmodule Mensor.Finder do
 
   @impl GenServer
   def handle_continue(:init, nil) do
+    atlantis_files = Mensor.Finder.FilepathEnumeration.enumerate_filepaths(@start_path)
+
     projFiles =
-      Mensor.Finder.FilepathEnumeration.proj_files(@start_path)
+      atlantis_files
+      |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
 
-    slnPaths =
-      Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
+    slnProjPaths = Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
 
-    (projFiles ++ slnPaths)
+    # TODO: Filter so that only paths that are not in proj files are used
+    # TODO: Use slnPaths to find folder paths
+
+    (projFiles ++ Enum.to_list(slnProjPaths))
     |> Enum.sort()
     |> Enum.dedup()
     |> Enum.each(fn x -> Mensor.DiscoverDependencies.start(x) end)
@@ -47,15 +52,14 @@ defmodule Mensor.Finder.FilepathEnumeration do
     |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
   end
 
-  # TODO: Replace Enum with Stream
   def solution_proj_files(path) do
     File.stream!(path)
-    |> Enum.map(&String.trim/1)
-    |> Enum.filter(&String.starts_with?(&1, "Project("))
-    |> Enum.map(&String.split(&1, ","))
-    |> Enum.filter(fn x -> String.ends_with?(Enum.at(x, 1), "proj\"") end)
-    |> Enum.map(&Enum.at(&1, 1))
-    |> Enum.map(fn x -> String.slice(x, 2..(String.length(x) - 2)) end)
-    |> Enum.map(fn x -> PathHelpers.parent(path) <> "\\" <> x end)
+    |> Stream.map(&String.trim/1)
+    |> Stream.filter(&String.starts_with?(&1, "Project("))
+    |> Stream.map(&String.split(&1, ","))
+    |> Stream.filter(fn x -> String.ends_with?(Enum.at(x, 1), "proj\"") end)
+    |> Stream.map(&Enum.at(&1, 1))
+    |> Stream.map(fn x -> String.slice(x, 2..(String.length(x) - 2)) end)
+    |> Stream.map(fn x -> PathHelpers.parent(path) <> "\\" <> x end)
   end
 end
