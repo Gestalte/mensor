@@ -33,7 +33,6 @@ defmodule Mensor.Finder do
       |> Enum.map(&Mensor.Finder.FilepathEnumeration.enumerate_filepaths(&1))
       |> List.flatten()
 
-    # TODO: Filter out bin and obj folders.
     (atlantis_filepaths ++ external_filepaths)
     |> Enum.each(&Mensor.DiscoverComponents.start(&1))
 
