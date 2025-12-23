@@ -1,4 +1,4 @@
-defmodule Mensor.Writer do
+defmodule Mensor.DependencyWriter do
   use GenServer
 
   @output_folder "./output"

@@ -33,7 +33,7 @@ defmodule Mensor.DiscoverDependencies do
       Mensor.Dependency.new(filename, language, x.name, x.version, relative_path)
     end)
     |> Enum.to_list()
-    |> Enum.each(&Mensor.Writer.write(&1))
+    |> Enum.each(&Mensor.DependencyWriter.write(&1))
 
     {:noreply, nil}
   end
