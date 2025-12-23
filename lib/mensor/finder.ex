@@ -14,21 +14,28 @@ defmodule Mensor.Finder do
 
   @impl GenServer
   def handle_continue(:init, nil) do
-    atlantis_files = Mensor.Finder.FilepathEnumeration.enumerate_filepaths(@start_path)
+    atlantis_filepaths = Mensor.Finder.FilepathEnumeration.enumerate_filepaths(@start_path)
 
     projFiles =
-      atlantis_files
+      atlantis_filepaths
       |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
 
     slnProjPaths = Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
-
-    # TODO: Filter so that only paths that are not in proj files are used
-    # TODO: Use slnPaths to find folder paths
 
     (projFiles ++ Enum.to_list(slnProjPaths))
     |> Enum.sort()
     |> Enum.dedup()
     |> Enum.each(fn x -> Mensor.DiscoverDependencies.start(x) end)
+
+    external_filepaths =
+      MapSet.difference(MapSet.new(slnProjPaths), MapSet.new(projFiles))
+      |> Enum.map(&PathHelpers.parent(&1))
+      |> Enum.map(&Mensor.Finder.FilepathEnumeration.enumerate_filepaths(&1))
+      |> List.flatten()
+
+    # TODO: Filter out bin and obj folders.
+    (atlantis_filepaths ++ external_filepaths)
+    |> Enum.each(&Mensor.DiscoverComponents.start(&1))
 
     {:noreply, nil}
   end
@@ -45,11 +52,6 @@ defmodule Mensor.Finder.FilepathEnumeration do
       end
     end)
     |> List.flatten()
-  end
-
-  def proj_files(path) do
-    enumerate_filepaths(path)
-    |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
   end
 
   def solution_proj_files(path) do
