@@ -7,7 +7,6 @@ defmodule Mensor.DiscoverDependencies do
 
   @impl GenServer
   def init(path) do
-    IO.inspect(path)
     {:ok, path, {:continue, :init}}
   end
 
@@ -23,13 +22,18 @@ defmodule Mensor.DiscoverDependencies do
         _ -> "Unknown"
       end
 
+    relative_path = "..\\DolfinMono" <> Enum.at(String.split(path, "DolfinMono"), 1)
+
     File.stream!(path)
-    |> Enum.map(&String.trim/1)
-    |> Enum.filter(&String.starts_with?(&1, "<Reference Include=\""))
-    |> Enum.map(&extract_string(&1))
-    |> Enum.map(&parse_line(&1))
-    |> Enum.map(fn x -> Mensor.Dependency.new(filename, language, x.name, x.version, path) end)
-    |> Enum.map(&Mensor.Writer.write(&1))
+    |> Stream.map(&String.trim/1)
+    |> Stream.filter(&String.starts_with?(&1, "<Reference Include=\""))
+    |> Stream.map(&extract_string(&1))
+    |> Stream.map(&parse_line(&1))
+    |> Stream.map(fn x ->
+      Mensor.Dependency.new(filename, language, x.name, x.version, relative_path)
+    end)
+    |> Enum.to_list()
+    |> Enum.each(&Mensor.Writer.write(&1))
 
     {:noreply, nil}
   end
