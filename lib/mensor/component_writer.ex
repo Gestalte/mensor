@@ -14,7 +14,7 @@ defmodule Mensor.ComponentWriter do
     File.rm(@output_folder <> "\\" <> @file_name)
 
     {:ok, file} = File.open(@output_folder <> "\\" <> @file_name, [:write, :append])
-    IO.binwrite(file, "name|line|path|extension")
+    IO.binwrite(file, "name|project|line|path|extension")
 
     {:ok, nil}
   end
@@ -27,9 +27,29 @@ defmodule Mensor.ComponentWriter do
   def handle_cast({:write, data}, nil) do
     {:ok, file} = File.open(@output_folder <> "\\" <> @file_name, [:write, :append])
 
-    IO.binwrite(file, "\n#{data.name}|#{data.line}|#{data.path}|#{data.extension}")
+    project = find_proj(Path.dirname(data.path))
+    relative_path = "..\\DolfinMono" <> Enum.at(String.split(data.path, "DolfinMono"), 1)
+    file_extension = Path.extname(data.path)
+
+    IO.binwrite(
+      file,
+      "\n#{data.name}|#{project}|#{data.line}|#{relative_path}|#{file_extension}"
+    )
+
     File.close(file)
 
     {:noreply, nil}
+  end
+
+  def find_proj(path) do
+    proj =
+      File.ls!(path)
+      |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
+      |> List.first()
+
+    case proj == nil do
+      false -> proj
+      true -> find_proj(PathHelpers.parent(path))
+    end
   end
 end

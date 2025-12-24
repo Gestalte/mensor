@@ -19,6 +19,7 @@ defmodule Mensor.DiscoverComponents do
 
   @impl GenServer
   def init(path) do
+    IO.inspect(path)
     {:ok, path, {:continue, :init}}
   end
 
@@ -34,13 +35,14 @@ defmodule Mensor.DiscoverComponents do
   defp collect_occurance(line, path) do
     telerik_pattern = ~r/(?<!\/)(?<!schemas\.)(?<!namespace(:|\s))telerik[a-z0-9.:]+/i
 
-    file_extension = Path.extname(path)
-    relative_path = "..\\DolfinMono" <> Enum.at(String.split(path, "DolfinMono"), 1)
-
     Regex.scan(telerik_pattern, line)
     |> Enum.filter(fn x -> x != [] end)
     |> Enum.map(fn x ->
-      %{name: x, line: line, path: relative_path, extension: file_extension}
+      %{
+        name: x,
+        line: line,
+        path: path
+      }
     end)
     |> Enum.each(&Mensor.ComponentWriter.write(&1))
   end
