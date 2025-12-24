@@ -20,9 +20,11 @@ defmodule Mensor.Finder do
       atlantis_filepaths
       |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
 
-    slnProjPaths = Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
+    slnProjPaths =
+      Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
+      |> Enum.to_list()
 
-    (projFiles ++ Enum.to_list(slnProjPaths))
+    (projFiles ++ slnProjPaths)
     |> Enum.sort()
     |> Enum.dedup()
     |> Enum.each(fn x -> Mensor.DiscoverDependencies.start(x) end)
@@ -33,7 +35,10 @@ defmodule Mensor.Finder do
       |> Enum.map(&Mensor.Finder.FilepathEnumeration.enumerate_filepaths(&1))
       |> List.flatten()
 
-    (atlantis_filepaths ++ external_filepaths)
+    atlantis_filepaths
+    |> Enum.each(&Mensor.DiscoverComponents.start(&1))
+
+    external_filepaths
     |> Enum.each(&Mensor.DiscoverComponents.start(&1))
 
     {:noreply, nil}
