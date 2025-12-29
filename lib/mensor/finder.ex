@@ -14,20 +14,38 @@ defmodule Mensor.Finder do
 
   @impl GenServer
   def handle_continue(:init, nil) do
+    ts = Time.utc_now()
     atlantis_filepaths = Mensor.Finder.FilepathEnumeration.enumerate_filepaths(@start_path)
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond), label: "Found atlantis filepaths")
+
+    ts = Time.utc_now()
 
     projFiles =
       atlantis_filepaths
       |> Enum.filter(fn x -> String.ends_with?(x, "proj") end)
 
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond), label: "Found *proj filepaths")
+
+    ts = Time.utc_now()
+
     slnProjPaths =
       Mensor.Finder.FilepathEnumeration.solution_proj_files(@start_path <> ".sln")
       |> Enum.to_list()
 
-    (projFiles ++ slnProjPaths)
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond), label: "Found sln filepaths")
+
+    ts = Time.utc_now()
+
+    Enum.concat(projFiles, slnProjPaths)
     |> Enum.sort()
     |> Enum.dedup()
     |> Enum.each(fn x -> Mensor.DiscoverDependencies.start(x) end)
+
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond),
+      label: "Sent filepaths to discover dependencies"
+    )
+
+    ts = Time.utc_now()
 
     external_filepaths =
       MapSet.difference(MapSet.new(slnProjPaths), MapSet.new(projFiles))
@@ -35,11 +53,25 @@ defmodule Mensor.Finder do
       |> Enum.map(&Mensor.Finder.FilepathEnumeration.enumerate_filepaths(&1))
       |> List.flatten()
 
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond), label: "Found external filepaths")
+
+    ts = Time.utc_now()
+
     atlantis_filepaths
     |> Enum.each(&Mensor.DiscoverComponents.start(&1))
 
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond),
+      label: "Send atlantis filepaths to discover components"
+    )
+
+    ts = Time.utc_now()
+
     external_filepaths
     |> Enum.each(&Mensor.DiscoverComponents.start(&1))
+
+    IO.inspect(Time.diff(Time.utc_now(), ts, :microsecond),
+      label: "Send external filepaths to discover components"
+    )
 
     {:noreply, nil}
   end
