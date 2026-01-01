@@ -1,7 +1,7 @@
 defmodule Mensor.DiscoverComponents do
-  use GenServer
+  use GenServer, restart: :temporary
 
-  def start(path) do
+  def start_link(path) do
     cond do
       String.contains?(path, "\\bin\\") ->
         :ignore
@@ -13,13 +13,17 @@ defmodule Mensor.DiscoverComponents do
         :ignore
 
       true ->
-        GenServer.start(Mensor.DiscoverComponents, path)
+        GenServer.start_link(__MODULE__, path, name: via_tuple(path))
     end
+  end
+
+  defp via_tuple(path) do
+    {:via, Registry, {:my_registry, {__MODULE__, path}}}
   end
 
   @impl GenServer
   def init(path) do
-    IO.inspect(path)
+    IO.puts("Starting DiscoverComponents for #{path}")
     {:ok, path, {:continue, :init}}
   end
 

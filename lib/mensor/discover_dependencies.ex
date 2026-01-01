@@ -1,12 +1,17 @@
 defmodule Mensor.DiscoverDependencies do
-  use GenServer
+  use GenServer, restart: :temporary
 
-  def start(path) do
-    GenServer.start(Mensor.DiscoverDependencies, path)
+  def start_link(path) do
+    GenServer.start_link(__MODULE__, path, name: via_tuple(path))
+  end
+
+  defp via_tuple(path) do
+    {:via, Registry, {:my_registry, {__MODULE__, path}}}
   end
 
   @impl GenServer
   def init(path) do
+    IO.puts("Start DiscoverDependencies for #{path}")
     {:ok, path, {:continue, :init}}
   end
 
