@@ -3,13 +3,14 @@ defmodule Mensor.DependencyWriter do
 
   @output_folder "./output"
 
-  def start do
-    GenServer.start(__MODULE__, nil, name: __MODULE__)
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
   # TODO: Hold onto the open file and use it for all writes, close it when exiting.
   @impl GenServer
   def init(_) do
+    IO.puts("Starting ComponentWriter")
     File.mkdir_p!(@output_folder)
     File.rm(@output_folder <> "\\" <> "dependencies.csv")
 
@@ -20,7 +21,7 @@ defmodule Mensor.DependencyWriter do
       "project,language,name,version,path"
     )
 
-    {:ok, nil}
+    {:ok, file}
   end
 
   def write(data) do
@@ -28,16 +29,16 @@ defmodule Mensor.DependencyWriter do
   end
 
   @impl GenServer
-  def handle_cast({:write, data}, nil) do
-    {:ok, file} = File.open(@output_folder <> "\\" <> "dependencies.csv", [:write, :append])
+  def handle_cast({:write, data}, file) do
+    # {:ok, file} = File.open(@output_folder <> "\\" <> "dependencies.csv", [:write, :append])
 
     IO.binwrite(
       file,
       "\n#{data.project},#{data.language},#{data.name},#{data.version},#{data.path}"
     )
 
-    File.close(file)
+    # File.close(file)
 
-    {:noreply, nil}
+    {:noreply, file}
   end
 end

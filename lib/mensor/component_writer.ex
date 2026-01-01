@@ -4,19 +4,20 @@ defmodule Mensor.ComponentWriter do
   @output_folder "./output"
   @file_name "components.csv"
 
-  def start do
-    GenServer.start(__MODULE__, nil, name: __MODULE__)
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
   @impl GenServer
   def init(_) do
+    IO.puts("Starting ComponentWriter")
     File.mkdir_p!(@output_folder)
     File.rm(@output_folder <> "\\" <> @file_name)
 
     {:ok, file} = File.open(@output_folder <> "\\" <> @file_name, [:write, :append])
     IO.binwrite(file, "name|project|line|path|extension")
 
-    {:ok, nil}
+    {:ok, file}
   end
 
   def write(data) do
@@ -24,8 +25,8 @@ defmodule Mensor.ComponentWriter do
   end
 
   @impl GenServer
-  def handle_cast({:write, data}, nil) do
-    {:ok, file} = File.open(@output_folder <> "\\" <> @file_name, [:write, :append])
+  def handle_cast({:write, data}, file) do
+    # {:ok, file} = File.open(@output_folder <> "\\" <> @file_name, [:write, :append])
 
     project = find_proj(Path.dirname(data.path))
     relative_path = "..\\DolfinMono" <> Enum.at(String.split(data.path, "DolfinMono"), 1)
@@ -36,9 +37,9 @@ defmodule Mensor.ComponentWriter do
       "\n#{data.name}|#{project}|#{data.line}|#{relative_path}|#{file_extension}"
     )
 
-    File.close(file)
+    # File.close(file)
 
-    {:noreply, nil}
+    {:noreply, file}
   end
 
   def find_proj(path) do
